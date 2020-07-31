@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,111 +14,61 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Controller
+@EnableSwagger2
 public class DemoController {
     @Autowired
-    private PeopleRepository peopleRepository;
-    private static List<Person> people = new ArrayList<>();
-//    private  List<Person> people1 = Arrays.asList(new Person("a","b",18,"111"));
-    static {
-        people.add(new Person("a","b",18,111));
-        people.add(new Person("c","d",20,222));
-        people.add(new Person("e","f",22,333));
-        people.add(new Person("g","h",10,444));
-    }
-
-    @GetMapping(value = "/demo")
-    @ResponseBody
-    public ResponseEntity<String> getDemo()
-    {
-        return new ResponseEntity<String>("mesaj", HttpStatus.OK);
-    }
-
-
-    @GetMapping(value = "/demoint")
-    @ResponseBody
-    public ResponseEntity<Integer> getDemoInt()
-    {
-        return new ResponseEntity<Integer>(1234, HttpStatus.OK);
-    }
-
-    @GetMapping(value = "/demoperson")
-    @ResponseBody
-    public ResponseEntity<Person> getDemoPerson()
-    {
-        return new ResponseEntity<Person>(new Person("ANA","DORA",21,299), HttpStatus.OK);
-    }
+    private PeopleService peopleService;
 
     @GetMapping(value = "/getallpeople")
     @ResponseBody
     public ResponseEntity<Collection<Person>> getAllPeople()
     {
-        return new ResponseEntity<Collection<Person>>(peopleRepository.findAllActiveUsersNative(), HttpStatus.OK);
+        return new ResponseEntity<>(peopleService.getAllPeople(), HttpStatus.OK);
     }
 
-    @GetMapping(value = "/demopeople")
+    @GetMapping(value = "/getperson/{id}")
     @ResponseBody
-    public ResponseEntity<List<Person>> getDemoPeople(@RequestParam (value = "age", required = false) Integer age ){
-
-        if(age!=null)
-            return new ResponseEntity<>(people.stream().filter(x -> x.getAge()>age).collect(Collectors.toList()), HttpStatus.OK);
+    public ResponseEntity getPerson(@PathVariable Integer id)
+    {
+        if(peopleService.getPerson(id).isPresent())
+            return new ResponseEntity<>(peopleService.getPerson(id).get(), HttpStatus.OK);
         else
-            return new ResponseEntity<>(people, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Person with id " + id + " not found", HttpStatus.NOT_FOUND);
     }
 
     @PostMapping(value = "/addperson")
     @ResponseBody
     public ResponseEntity<String> addPerson(@RequestBody Person person)
     {
-        if(person!=null){
-            people.add(person);
-            return new ResponseEntity<>("created", HttpStatus.CREATED);}
-        return new ResponseEntity<>("not created", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(peopleService.addPerson(person).toString()+" was added", HttpStatus.CREATED);
     }
-
-
-    //TODO
-    //update record endpoint
-    //remove one record, optional param in fctie de nume/age/etc
-    //using docker find a way to run mysql
-    //install mySql workbench
-    //connection from mysql wb to mysql from docker
 
     @PutMapping(value = "/modifyperson")
     @ResponseBody
     public ResponseEntity<String> modifyPerson(@RequestBody Person person)
     {
-        //considering cnp as unique id
-        if(person==null)
-            return new ResponseEntity<>("person expected", HttpStatus.BAD_REQUEST);
-
-        int index=people.indexOf(person);
-        if(index==-1)
-            return new ResponseEntity<>("person not found", HttpStatus.NOT_FOUND);
-
-        people.get(index).updatePerson(person);
-        return new ResponseEntity<>("person updated", HttpStatus.OK);
+        return new ResponseEntity<>(peopleService.modifyPerson(person).toString() + " was modified", HttpStatus.OK);
     }
 
     @DeleteMapping(value = "/deleteperson")
     @ResponseBody
-    public ResponseEntity<String> deletePerson(@RequestParam (value="cnp", required = false) Integer cnp)
+    public ResponseEntity<String> deletePerson(@RequestBody Person person)
     {
-        //is a body needed?
-//        if(cnp==null)
-//            return new ResponseEntity<>("cnp expected", HttpStatus.BAD_REQUEST);
-//
-//        int index=people.stream()
-//                .filter(x->x.getCnp().equals(cnp))
-//                .map(y->people.indexOf(y))
-//                .findFirst()
-//                .orElse(-1);
-//
-//        if(index==-1)
-//            return new ResponseEntity<>("person not found", HttpStatus.NOT_FOUND);
-//
-//        people.remove(index);
-//        return new ResponseEntity<>("person removed", HttpStatus.OK);
-        peopleRepository.deleteById(cnp);
-        return new ResponseEntity<>("person removed", HttpStatus.OK);
+        if(peopleService.findPerson(person).isPresent()) {
+            peopleService.deletePerson(person);
+            return new ResponseEntity<>("person with id " + person.getId() + " was removed", HttpStatus.OK);
+        }
+        return new ResponseEntity<>( person.toString() + " not found", HttpStatus.NOT_FOUND);
     }
+
+    //TODO
+    //1. Adauga o noua persoana
+    //2. Verif ca s-a adaugat cu getall
+    //3. Verif ca s-a adaugat cu getperson
+    //4. Update persoana
+    //5. Verif ca s-a updatat cu getall
+    //6. Verif ca s-a updatat cu getperson
+    //7. Sterg persoana
+    //8. verif
+    //9. verif
 }
